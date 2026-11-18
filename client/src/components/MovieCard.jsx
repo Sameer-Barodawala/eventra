@@ -3,6 +3,9 @@ import { Link } from 'react-router-dom';
 import { Star, Clock } from 'lucide-react';
 
 export default function MovieCard({ movie }) {
+  const rating = parseFloat(movie.rating) || 8.5;
+  const duration = parseInt(movie.duration, 10) || 0;
+
   const formatDuration = (mins) => {
     const hours = Math.floor(mins / 60);
     const minutes = mins % 60;
@@ -21,14 +24,14 @@ export default function MovieCard({ movie }) {
         />
         <div className="absolute top-3 left-3 bg-slate-950/80 backdrop-blur-md px-2.5 py-1 rounded-full flex items-center gap-1 border border-slate-700/60">
           <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-          <span className="text-xs font-bold text-white">{movie.rating?.toFixed(1) || '8.5'}</span>
+          <span className="text-xs font-bold text-white">{rating.toFixed(1)}</span>
         </div>
 
         <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between text-xs text-slate-300 bg-slate-950/85 backdrop-blur-md px-3 py-1.5 rounded-xl border border-slate-800">
           <span className="font-medium text-slate-200">{movie.language}</span>
           <span className="flex items-center gap-1 text-slate-400">
             <Clock className="w-3 h-3" />
-            {formatDuration(movie.duration)}
+            {formatDuration(duration)}
           </span>
         </div>
       </div>

@@ -82,7 +82,7 @@ export default function HomePage() {
                   Book Tickets
                 </Link>
                 <span className="text-xs text-slate-400">
-                  {featuredMovie.language} • {featuredMovie.duration} mins • ⭐ {featuredMovie.rating}
+                  {featuredMovie.language} • {featuredMovie.duration} mins • ⭐ {parseFloat(featuredMovie.rating).toFixed(1)}
                 </span>
               </div>
             </div>

@@ -46,10 +46,12 @@ export default function MovieDetailsPage() {
   }
 
   const formatDuration = (mins) => {
-    const hours = Math.floor(mins / 60);
-    const minutes = mins % 60;
+    const hours = Math.floor(parseInt(mins, 10) / 60);
+    const minutes = parseInt(mins, 10) % 60;
     return `${hours}h ${minutes}m`;
   };
+
+  const rating = parseFloat(movie.rating) || 8.5;
 
   const formattedRelease = new Date(movie.releaseDate).toLocaleDateString('en-US', {
     month: 'short',
@@ -98,7 +100,7 @@ export default function MovieDetailsPage() {
                 </span>
                 <div className="flex items-center gap-1.5 bg-slate-800 text-amber-400 text-xs font-bold px-3 py-1 rounded-full border border-slate-700">
                   <Star className="w-3.5 h-3.5 fill-amber-400" />
-                  <span>{movie.rating?.toFixed(1)} / 10</span>
+                  <span>{rating.toFixed(1)} / 10</span>
                 </div>
               </div>
 

@@ -1,6 +1,8 @@
 import React from 'react';
 
 export default function SeatGrid({ seats, bookedSeatIds, selectedSeats, onToggleSeat, basePrice }) {
+  const price = parseFloat(basePrice) || 0;
+
   // Group seats by row
   const rowsMap = seats.reduce((acc, seat) => {
     if (!acc[seat.seatRow]) {
@@ -14,9 +16,9 @@ export default function SeatGrid({ seats, bookedSeatIds, selectedSeats, onToggle
   const sortedRows = Object.keys(rowsMap).sort();
 
   const getSeatPrice = (type) => {
-    if (type === 'GOLD') return Math.round(basePrice * 1.3);
-    if (type === 'PLATINUM') return Math.round(basePrice * 1.6);
-    return Math.round(basePrice);
+    if (type === 'GOLD') return Math.round(price * 1.3);
+    if (type === 'PLATINUM') return Math.round(price * 1.6);
+    return Math.round(price);
   };
 
   return (
@@ -101,15 +103,15 @@ export default function SeatGrid({ seats, bookedSeatIds, selectedSeats, onToggle
 
         <div className="flex items-center gap-2 text-slate-300">
           <span className="w-2.5 h-2.5 rounded-full bg-slate-400"></span>
-          <span>Silver: ₹{Math.round(basePrice)}</span>
+          <span>Silver: ₹{Math.round(price)}</span>
         </div>
         <div className="flex items-center gap-2 text-amber-300">
           <span className="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
-          <span>Gold: ₹{Math.round(basePrice * 1.3)}</span>
+          <span>Gold: ₹{Math.round(price * 1.3)}</span>
         </div>
         <div className="flex items-center gap-2 text-purple-300">
           <span className="w-2.5 h-2.5 rounded-full bg-purple-500"></span>
-          <span>Platinum: ₹{Math.round(basePrice * 1.6)}</span>
+          <span>Platinum: ₹{Math.round(price * 1.6)}</span>
         </div>
       </div>
     </div>

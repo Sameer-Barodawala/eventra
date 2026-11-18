@@ -69,11 +69,12 @@ export default function SeatBookingPage() {
 
   const { movie, screen, price } = show;
   const theatre = screen?.theatre;
+  const basePrice = parseFloat(price) || 0;
 
   const getSeatPrice = (type) => {
-    if (type === 'GOLD') return Math.round(price * 1.3);
-    if (type === 'PLATINUM') return Math.round(price * 1.6);
-    return Math.round(price);
+    if (type === 'GOLD') return Math.round(basePrice * 1.3);
+    if (type === 'PLATINUM') return Math.round(basePrice * 1.6);
+    return Math.round(basePrice);
   };
 
   const totalPrice = selectedSeats.reduce((sum, s) => sum + getSeatPrice(s.seatType), 0);
@@ -84,6 +85,8 @@ export default function SeatBookingPage() {
       minute: '2-digit'
     });
   };
+
+  const formatTime = formatShowTime;
 
   const formatShowDate = (dateString) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -149,7 +152,7 @@ export default function SeatBookingPage() {
             bookedSeatIds={bookedSeatIds}
             selectedSeats={selectedSeats}
             onToggleSeat={handleToggleSeat}
-            basePrice={price}
+            basePrice={basePrice}
           />
         </div>
       </div>
