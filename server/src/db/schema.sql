@@ -1,0 +1,80 @@
+-- Database initialization schema for Eventra (BookMyShow Clone)
+
+CREATE TABLE IF NOT EXISTS users (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  email VARCHAR(255) NOT NULL UNIQUE,
+  password VARCHAR(255) NOT NULL,
+  role VARCHAR(50) DEFAULT 'USER',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS movies (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  title VARCHAR(255) NOT NULL,
+  description TEXT NOT NULL,
+  poster_url VARCHAR(500) NOT NULL,
+  banner_url VARCHAR(500) NOT NULL,
+  genre VARCHAR(100) NOT NULL,
+  duration INT NOT NULL,
+  language VARCHAR(50) NOT NULL,
+  rating DECIMAL(3, 1) DEFAULT 8.5,
+  release_date DATE NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS theatres (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  city VARCHAR(100) NOT NULL,
+  location VARCHAR(255) NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS screens (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  theatre_id INT NOT NULL,
+  name VARCHAR(255) NOT NULL,
+  total_seats INT NOT NULL,
+  FOREIGN KEY (theatre_id) REFERENCES theatres(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS seats (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  screen_id INT NOT NULL,
+  seat_row VARCHAR(5) NOT NULL,
+  seat_number INT NOT NULL,
+  seat_type VARCHAR(20) DEFAULT 'SILVER',
+  FOREIGN KEY (screen_id) REFERENCES screens(id) ON DELETE CASCADE,
+  UNIQUE KEY unique_screen_seat (screen_id, seat_row, seat_number)
+);
+
+CREATE TABLE IF NOT EXISTS shows (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  movie_id INT NOT NULL,
+  screen_id INT NOT NULL,
+  start_time DATETIME NOT NULL,
+  end_time DATETIME NOT NULL,
+  price DECIMAL(10, 2) NOT NULL,
+  FOREIGN KEY (movie_id) REFERENCES movies(id) ON DELETE CASCADE,
+  FOREIGN KEY (screen_id) REFERENCES screens(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS bookings (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  show_id INT NOT NULL,
+  total_amount DECIMAL(10, 2) NOT NULL,
+  booking_status VARCHAR(50) DEFAULT 'CONFIRMED',
+  booking_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (show_id) REFERENCES shows(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS booking_seats (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  booking_id INT NOT NULL,
+  seat_id INT NOT NULL,
+  FOREIGN KEY (booking_id) REFERENCES bookings(id) ON DELETE CASCADE,
+  FOREIGN KEY (seat_id) REFERENCES seats(id) ON DELETE CASCADE,
+  UNIQUE KEY unique_booking_seat (booking_id, seat_id)
+);

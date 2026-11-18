@@ -1,25 +1,11 @@
 const request = require('supertest');
 const app = require('../src/app');
-const prisma = require('../src/config/prisma');
+const db = require('../src/config/db');
 const jwt = require('jsonwebtoken');
 
-jest.mock('../src/config/prisma', () => ({
-  show: {
-    findUnique: jest.fn()
-  },
-  seat: {
-    findMany: jest.fn()
-  },
-  bookingSeat: {
-    findMany: jest.fn()
-  },
-  booking: {
-    findMany: jest.fn(),
-    findUnique: jest.fn(),
-    create: jest.fn(),
-    update: jest.fn()
-  },
-  $transaction: jest.fn()
+jest.mock('../src/config/db', () => ({
+  query: jest.fn(),
+  getConnection: jest.fn()
 }));
 
 const createToken = (userId = 1, role = 'USER') => {
@@ -59,21 +45,29 @@ describe('Booking Endpoints (/api/bookings)', () => {
     it('should return 409 Conflict if any selected seat is already booked', async () => {
       const token = createToken();
 
-      prisma.show.findUnique.mockResolvedValueOnce({
-        id: 1,
-        screenId: 1,
-        price: 250
-      });
+      const mockConn = {
+        beginTransaction: jest.fn().mockResolvedValue(),
+        commit: jest.fn().mockResolvedValue(),
+        rollback: jest.fn().mockResolvedValue(),
+        release: jest.fn(),
+        query: jest.fn()
+      };
+      db.getConnection.mockResolvedValueOnce(mockConn);
 
-      prisma.seat.findMany.mockResolvedValueOnce([
-        { id: 10, seatRow: 'A', seatNumber: 1, seatType: 'SILVER' },
-        { id: 11, seatRow: 'A', seatNumber: 2, seatType: 'SILVER' }
-      ]);
-
-      // Seat 10 is already booked!
-      prisma.bookingSeat.findMany.mockResolvedValueOnce([
-        { seatId: 10, seat: { seatRow: 'A', seatNumber: 1 } }
-      ]);
+      // 1. Show query
+      mockConn.query
+        .mockResolvedValueOnce([[{ id: 1, screen_id: 1, price: '250.00', movie_title: 'Dune 2' }]])
+        // 2. Seats query
+        .mockResolvedValueOnce([
+          [
+            { id: 10, screen_id: 1, seat_row: 'A', seat_number: 1, seat_type: 'SILVER' },
+            { id: 11, screen_id: 1, seat_row: 'A', seat_number: 2, seat_type: 'SILVER' }
+          ]
+        ])
+        // 3. Existing bookings conflict check (Seat 10 is already booked!)
+        .mockResolvedValueOnce([
+          [{ seat_id: 10, seat_row: 'A', seat_number: 1 }]
+        ]);
 
       const res = await request(app)
         .post('/api/bookings')
@@ -82,49 +76,40 @@ describe('Booking Endpoints (/api/bookings)', () => {
 
       expect(res.statusCode).toBe(409);
       expect(res.body.message).toContain('Seats already booked: A1');
+      expect(mockConn.rollback).toHaveBeenCalledTimes(1);
+      expect(mockConn.release).toHaveBeenCalledTimes(1);
     });
 
-    it('should successfully book seats and return 201 with confirmed booking', async () => {
+    it('should successfully book seats with transaction and return 201', async () => {
       const token = createToken();
 
-      prisma.show.findUnique.mockResolvedValueOnce({
-        id: 1,
-        screenId: 1,
-        price: 200
-      });
+      const mockConn = {
+        beginTransaction: jest.fn().mockResolvedValue(),
+        commit: jest.fn().mockResolvedValue(),
+        rollback: jest.fn().mockResolvedValue(),
+        release: jest.fn(),
+        query: jest.fn()
+      };
+      db.getConnection.mockResolvedValueOnce(mockConn);
 
-      prisma.seat.findMany.mockResolvedValueOnce([
-        { id: 10, seatRow: 'A', seatNumber: 1, seatType: 'SILVER' },
-        { id: 11, seatRow: 'C', seatNumber: 1, seatType: 'GOLD' }
-      ]);
-
-      // No conflict
-      prisma.bookingSeat.findMany.mockResolvedValueOnce([]);
-
-      // Mock transaction execution
-      prisma.$transaction.mockImplementation(async (callback) => {
-        const tx = {
-          booking: {
-            create: jest.fn().mockResolvedValue({ id: 99 })
-          },
-          bookingSeat: {
-            createMany: jest.fn().mockResolvedValue({ count: 2 })
-          }
-        };
-        return await callback(tx);
-      });
-
-      prisma.booking.findUnique.mockResolvedValueOnce({
-        id: 99,
-        userId: 1,
-        showId: 1,
-        totalAmount: 460, // 200 (silver) + 260 (gold 1.3x)
-        bookingStatus: 'CONFIRMED',
-        bookingSeats: [
-          { seat: { seatRow: 'A', seatNumber: 1 } },
-          { seat: { seatRow: 'C', seatNumber: 1 } }
-        ]
-      });
+      mockConn.query
+        // 1. Show query
+        .mockResolvedValueOnce([[{ id: 1, screen_id: 1, price: '200.00', movie_title: 'Dune 2' }]])
+        // 2. Seats query
+        .mockResolvedValueOnce([
+          [
+            { id: 10, screen_id: 1, seat_row: 'A', seat_number: 1, seat_type: 'SILVER' },
+            { id: 11, screen_id: 1, seat_row: 'C', seat_number: 1, seat_type: 'GOLD' }
+          ]
+        ])
+        // 3. No conflict
+        .mockResolvedValueOnce([[]])
+        // 4. Insert booking
+        .mockResolvedValueOnce([{ insertId: 99 }])
+        // 5. Insert booking seat 10
+        .mockResolvedValueOnce([{ insertId: 1 }])
+        // 6. Insert booking seat 11
+        .mockResolvedValueOnce([{ insertId: 2 }]);
 
       const res = await request(app)
         .post('/api/bookings')
@@ -134,7 +119,9 @@ describe('Booking Endpoints (/api/bookings)', () => {
       expect(res.statusCode).toBe(201);
       expect(res.body.message).toContain('Booking confirmed');
       expect(res.body.booking.id).toBe(99);
-      expect(res.body.booking.totalAmount).toBe(460);
+      expect(res.body.booking.totalAmount).toBe(460); // 200 + 260
+      expect(mockConn.commit).toHaveBeenCalledTimes(1);
+      expect(mockConn.release).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -142,14 +129,33 @@ describe('Booking Endpoints (/api/bookings)', () => {
     it('should fetch user bookings', async () => {
       const token = createToken(1);
 
-      prisma.booking.findMany.mockResolvedValueOnce([
-        {
-          id: 99,
-          totalAmount: 460,
-          bookingStatus: 'CONFIRMED',
-          show: { movie: { title: 'Dune: Part Two' } }
-        }
-      ]);
+      const mockBookingRow = {
+        id: 99,
+        totalAmount: '460.00',
+        bookingStatus: 'CONFIRMED',
+        bookingDate: new Date().toISOString(),
+        show_id: 1,
+        show_startTime: new Date().toISOString(),
+        show_endTime: new Date().toISOString(),
+        show_price: '200.00',
+        movie_id: 1,
+        movie_title: 'Dune: Part Two',
+        movie_poster: 'poster.jpg',
+        screen_id: 1,
+        screen_name: 'Audi 1',
+        theatre_id: 1,
+        theatre_name: 'PVR ICON',
+        theatre_city: 'Mumbai',
+        theatre_location: 'Lower Parel'
+      };
+
+      const mockSeats = [
+        { booking_id: 99, id: 10, seatRow: 'A', seatNumber: 1, seatType: 'SILVER' }
+      ];
+
+      db.query
+        .mockResolvedValueOnce([[mockBookingRow]])
+        .mockResolvedValueOnce([mockSeats]);
 
       const res = await request(app)
         .get('/api/bookings/my-bookings')
@@ -158,6 +164,7 @@ describe('Booking Endpoints (/api/bookings)', () => {
       expect(res.statusCode).toBe(200);
       expect(res.body.bookings).toHaveLength(1);
       expect(res.body.bookings[0].show.movie.title).toBe('Dune: Part Two');
+      expect(res.body.bookings[0].totalAmount).toBe(460);
     });
   });
 });

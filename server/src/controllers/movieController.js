@@ -1,33 +1,38 @@
-const prisma = require('../config/prisma');
+const db = require('../config/db');
 
 const getAllMovies = async (req, res, next) => {
   try {
     const { search, genre, language } = req.query;
 
-    const where = {};
+    let query = `
+      SELECT id, title, description, poster_url AS posterUrl, banner_url AS bannerUrl,
+             genre, duration, language, rating, release_date AS releaseDate, created_at AS createdAt
+      FROM movies
+      WHERE 1=1
+    `;
+    const params = [];
 
     if (search) {
-      where.OR = [
-        { title: { contains: search } },
-        { description: { contains: search } },
-        { genre: { contains: search } }
-      ];
+      query += ` AND (title LIKE ? OR description LIKE ? OR genre LIKE ?)`;
+      const searchPattern = `%${search}%`;
+      params.push(searchPattern, searchPattern, searchPattern);
     }
 
     if (genre) {
-      where.genre = { contains: genre };
+      query += ` AND genre LIKE ?`;
+      params.push(`%${genre}%`);
     }
 
     if (language) {
-      where.language = { equals: language };
+      query += ` AND language = ?`;
+      params.push(language);
     }
 
-    const movies = await prisma.movie.findMany({
-      where,
-      orderBy: { releaseDate: 'desc' }
-    });
+    query += ` ORDER BY release_date DESC`;
 
-    return res.status(200).json({ movies });
+    const [movies] = await db.query(query, params);
+
+    return res.status(200).json({ movies: movies || [] });
   } catch (error) {
     next(error);
   }
@@ -40,26 +45,18 @@ const getMovieById = async (req, res, next) => {
       return res.status(400).json({ message: 'Invalid movie ID' });
     }
 
-    const movie = await prisma.movie.findUnique({
-      where: { id },
-      include: {
-        shows: {
-          include: {
-            screen: {
-              include: {
-                theatre: true
-              }
-            }
-          }
-        }
-      }
-    });
+    const [movies] = await db.query(
+      `SELECT id, title, description, poster_url AS posterUrl, banner_url AS bannerUrl,
+              genre, duration, language, rating, release_date AS releaseDate, created_at AS createdAt
+       FROM movies WHERE id = ?`,
+      [id]
+    );
 
-    if (!movie) {
+    if (!movies || movies.length === 0) {
       return res.status(404).json({ message: 'Movie not found' });
     }
 
-    return res.status(200).json({ movie });
+    return res.status(200).json({ movie: movies[0] });
   } catch (error) {
     next(error);
   }
@@ -83,19 +80,33 @@ const createMovie = async (req, res, next) => {
       return res.status(400).json({ message: 'Missing required movie fields.' });
     }
 
-    const movie = await prisma.movie.create({
-      data: {
+    const [result] = await db.query(
+      `INSERT INTO movies (title, description, poster_url, banner_url, genre, duration, language, rating, release_date)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
         title,
         description,
         posterUrl,
-        bannerUrl: bannerUrl || posterUrl,
+        bannerUrl || posterUrl,
         genre,
-        duration: parseInt(duration, 10),
+        parseInt(duration, 10),
         language,
-        rating: rating ? parseFloat(rating) : 8.5,
-        releaseDate: releaseDate ? new Date(releaseDate) : new Date()
-      }
-    });
+        rating ? parseFloat(rating) : 8.5,
+        releaseDate || new Date()
+      ]
+    );
+
+    const movie = {
+      id: result.insertId,
+      title,
+      description,
+      posterUrl,
+      bannerUrl: bannerUrl || posterUrl,
+      genre,
+      duration: parseInt(duration, 10),
+      language,
+      rating: rating ? parseFloat(rating) : 8.5
+    };
 
     return res.status(201).json({ message: 'Movie created successfully.', movie });
   } catch (error) {
@@ -110,9 +121,7 @@ const deleteMovie = async (req, res, next) => {
       return res.status(400).json({ message: 'Invalid movie ID' });
     }
 
-    await prisma.movie.delete({
-      where: { id }
-    });
+    await db.query('DELETE FROM movies WHERE id = ?', [id]);
 
     return res.status(200).json({ message: 'Movie deleted successfully.' });
   } catch (error) {

@@ -1,13 +1,10 @@
 const request = require('supertest');
 const app = require('../src/app');
-const prisma = require('../src/config/prisma');
+const db = require('../src/config/db');
 const bcrypt = require('bcryptjs');
 
-jest.mock('../src/config/prisma', () => ({
-  user: {
-    findUnique: jest.fn(),
-    create: jest.fn()
-  }
+jest.mock('../src/config/db', () => ({
+  query: jest.fn()
 }));
 
 describe('Auth Endpoints (/api/auth)', () => {
@@ -35,7 +32,7 @@ describe('Auth Endpoints (/api/auth)', () => {
     });
 
     it('should fail if email already exists (409 Conflict)', async () => {
-      prisma.user.findUnique.mockResolvedValueOnce({ id: 1, email: 'duplicate@example.com' });
+      db.query.mockResolvedValueOnce([[{ id: 1 }]]);
 
       const res = await request(app)
         .post('/api/auth/register')
@@ -46,14 +43,9 @@ describe('Auth Endpoints (/api/auth)', () => {
     });
 
     it('should register user and return token on valid data', async () => {
-      prisma.user.findUnique.mockResolvedValueOnce(null);
-      prisma.user.create.mockResolvedValueOnce({
-        id: 1,
-        name: 'Jane Doe',
-        email: 'jane@example.com',
-        role: 'USER',
-        createdAt: new Date().toISOString()
-      });
+      db.query
+        .mockResolvedValueOnce([[]]) // no existing user
+        .mockResolvedValueOnce([{ insertId: 42 }]); // insert result
 
       const res = await request(app)
         .post('/api/auth/register')
@@ -62,12 +54,13 @@ describe('Auth Endpoints (/api/auth)', () => {
       expect(res.statusCode).toBe(201);
       expect(res.body).toHaveProperty('token');
       expect(res.body.user).toHaveProperty('email', 'jane@example.com');
+      expect(res.body.user.id).toBe(42);
     });
   });
 
   describe('POST /api/auth/login', () => {
     it('should reject non-existing email', async () => {
-      prisma.user.findUnique.mockResolvedValueOnce(null);
+      db.query.mockResolvedValueOnce([[]]);
 
       const res = await request(app)
         .post('/api/auth/login')
@@ -79,13 +72,15 @@ describe('Auth Endpoints (/api/auth)', () => {
 
     it('should reject wrong password', async () => {
       const hashedPassword = await bcrypt.hash('correctpassword', 10);
-      prisma.user.findUnique.mockResolvedValueOnce({
-        id: 1,
-        name: 'Jane',
-        email: 'jane@example.com',
-        password: hashedPassword,
-        role: 'USER'
-      });
+      db.query.mockResolvedValueOnce([[
+        {
+          id: 1,
+          name: 'Jane',
+          email: 'jane@example.com',
+          password: hashedPassword,
+          role: 'USER'
+        }
+      ]]);
 
       const res = await request(app)
         .post('/api/auth/login')
@@ -97,14 +92,16 @@ describe('Auth Endpoints (/api/auth)', () => {
 
     it('should return token on correct credentials', async () => {
       const hashedPassword = await bcrypt.hash('secret123', 10);
-      prisma.user.findUnique.mockResolvedValueOnce({
-        id: 1,
-        name: 'Jane',
-        email: 'jane@example.com',
-        password: hashedPassword,
-        role: 'USER',
-        createdAt: new Date()
-      });
+      db.query.mockResolvedValueOnce([[
+        {
+          id: 1,
+          name: 'Jane',
+          email: 'jane@example.com',
+          password: hashedPassword,
+          role: 'USER',
+          createdAt: new Date().toISOString()
+        }
+      ]]);
 
       const res = await request(app)
         .post('/api/auth/login')
@@ -125,23 +122,26 @@ describe('Auth Endpoints (/api/auth)', () => {
 
     it('should return current user when valid token is supplied', async () => {
       const hashedPassword = await bcrypt.hash('secret123', 10);
-      prisma.user.findUnique
-        .mockResolvedValueOnce({
-          id: 1,
-          name: 'Jane',
-          email: 'jane@example.com',
-          password: hashedPassword,
-          role: 'USER'
-        })
-        .mockResolvedValueOnce({
-          id: 1,
-          name: 'Jane',
-          email: 'jane@example.com',
-          role: 'USER',
-          createdAt: new Date()
-        });
+      db.query
+        .mockResolvedValueOnce([[
+          {
+            id: 1,
+            name: 'Jane',
+            email: 'jane@example.com',
+            password: hashedPassword,
+            role: 'USER'
+          }
+        ]])
+        .mockResolvedValueOnce([[
+          {
+            id: 1,
+            name: 'Jane',
+            email: 'jane@example.com',
+            role: 'USER',
+            createdAt: new Date().toISOString()
+          }
+        ]]);
 
-      // Log in first to get a real signed JWT
       const loginRes = await request(app)
         .post('/api/auth/login')
         .send({ email: 'jane@example.com', password: 'secret123' });

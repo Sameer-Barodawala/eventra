@@ -3,7 +3,7 @@ services:
     name: eventra-api
     env: node
     plan: free
-    buildCommand: npm install && npx prisma generate
+    buildCommand: npm install && npm run db:init && npm run db:seed
     startCommand: npm start
     envVars:
       - key: NODE_ENV

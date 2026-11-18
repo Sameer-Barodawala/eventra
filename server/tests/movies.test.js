@@ -1,15 +1,10 @@
 const request = require('supertest');
 const app = require('../src/app');
-const prisma = require('../src/config/prisma');
+const db = require('../src/config/db');
 const jwt = require('jsonwebtoken');
 
-jest.mock('../src/config/prisma', () => ({
-  movie: {
-    findMany: jest.fn(),
-    findUnique: jest.fn(),
-    create: jest.fn(),
-    delete: jest.fn()
-  }
+jest.mock('../src/config/db', () => ({
+  query: jest.fn()
 }));
 
 const createToken = (role = 'USER') => {
@@ -31,7 +26,7 @@ describe('Movie Endpoints (/api/movies)', () => {
         { id: 1, title: 'Dune: Part Two', genre: 'Sci-Fi', rating: 8.9 },
         { id: 2, title: 'Oppenheimer', genre: 'Drama', rating: 8.9 }
       ];
-      prisma.movie.findMany.mockResolvedValueOnce(mockMovies);
+      db.query.mockResolvedValueOnce([mockMovies]);
 
       const res = await request(app).get('/api/movies');
 
@@ -41,24 +36,21 @@ describe('Movie Endpoints (/api/movies)', () => {
     });
 
     it('should pass search filter query to database query', async () => {
-      prisma.movie.findMany.mockResolvedValueOnce([]);
+      db.query.mockResolvedValueOnce([[]]);
 
       const res = await request(app).get('/api/movies?search=Inception');
 
       expect(res.statusCode).toBe(200);
-      expect(prisma.movie.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: expect.objectContaining({
-            OR: expect.any(Array)
-          })
-        })
+      expect(db.query).toHaveBeenCalledWith(
+        expect.stringContaining('LIKE ?'),
+        expect.arrayContaining(['%Inception%'])
       );
     });
   });
 
   describe('GET /api/movies/:id', () => {
     it('should return 404 if movie does not exist', async () => {
-      prisma.movie.findUnique.mockResolvedValueOnce(null);
+      db.query.mockResolvedValueOnce([[]]);
 
       const res = await request(app).get('/api/movies/999');
 
@@ -70,10 +62,9 @@ describe('Movie Endpoints (/api/movies)', () => {
       const mockMovie = {
         id: 1,
         title: 'Interstellar',
-        duration: 169,
-        shows: []
+        duration: 169
       };
-      prisma.movie.findUnique.mockResolvedValueOnce(mockMovie);
+      db.query.mockResolvedValueOnce([[mockMovie]]);
 
       const res = await request(app).get('/api/movies/1');
 
@@ -107,7 +98,7 @@ describe('Movie Endpoints (/api/movies)', () => {
         rating: 7.8
       };
 
-      prisma.movie.create.mockResolvedValueOnce({ id: 10, ...newMovieData });
+      db.query.mockResolvedValueOnce([{ insertId: 10 }]);
 
       const res = await request(app)
         .post('/api/movies')
@@ -116,6 +107,7 @@ describe('Movie Endpoints (/api/movies)', () => {
 
       expect(res.statusCode).toBe(201);
       expect(res.body.movie.title).toBe('Avatar: The Way of Water');
+      expect(res.body.movie.id).toBe(10);
     });
   });
 });

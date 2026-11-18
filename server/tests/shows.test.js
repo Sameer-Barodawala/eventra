@@ -1,12 +1,9 @@
 const request = require('supertest');
 const app = require('../src/app');
-const prisma = require('../src/config/prisma');
+const db = require('../src/config/db');
 
-jest.mock('../src/config/prisma', () => ({
-  show: {
-    findMany: jest.fn(),
-    findUnique: jest.fn()
-  }
+jest.mock('../src/config/db', () => ({
+  query: jest.fn()
 }));
 
 describe('Show Endpoints (/api/shows)', () => {
@@ -16,30 +13,37 @@ describe('Show Endpoints (/api/shows)', () => {
 
   describe('GET /api/shows/movie/:movieId', () => {
     it('should return shows for a movie', async () => {
-      const mockShows = [
+      const mockRows = [
         {
           id: 1,
           movieId: 1,
           screenId: 1,
           startTime: new Date().toISOString(),
-          price: 250,
-          screen: { name: 'Audi 1', theatre: { name: 'PVR ICON' } }
+          endTime: new Date().toISOString(),
+          price: '250.00',
+          screen_id: 1,
+          screen_name: 'Audi 1',
+          theatre_id: 1,
+          theatre_name: 'PVR ICON',
+          theatre_city: 'Mumbai',
+          theatre_location: 'Lower Parel'
         }
       ];
 
-      prisma.show.findMany.mockResolvedValueOnce(mockShows);
+      db.query.mockResolvedValueOnce([mockRows]);
 
       const res = await request(app).get('/api/shows/movie/1');
 
       expect(res.statusCode).toBe(200);
       expect(res.body.shows).toHaveLength(1);
       expect(res.body.shows[0].price).toBe(250);
+      expect(res.body.shows[0].screen.name).toBe('Audi 1');
     });
   });
 
   describe('GET /api/shows/:id', () => {
     it('should return 404 if show is not found', async () => {
-      prisma.show.findUnique.mockResolvedValueOnce(null);
+      db.query.mockResolvedValueOnce([[]]);
 
       const res = await request(app).get('/api/shows/999');
 
@@ -48,28 +52,34 @@ describe('Show Endpoints (/api/shows)', () => {
     });
 
     it('should return show details with mapped bookedSeatIds', async () => {
-      const mockShow = {
+      const mockShowRow = {
         id: 1,
         movieId: 1,
         screenId: 1,
-        price: 300,
-        screen: {
-          name: 'Audi 1',
-          seats: [
-            { id: 101, seatRow: 'A', seatNumber: 1, seatType: 'SILVER' },
-            { id: 102, seatRow: 'A', seatNumber: 2, seatType: 'SILVER' }
-          ]
-        },
-        bookings: [
-          {
-            id: 50,
-            bookingStatus: 'CONFIRMED',
-            bookingSeats: [{ seatId: 101 }]
-          }
-        ]
+        startTime: new Date().toISOString(),
+        endTime: new Date().toISOString(),
+        price: '300.00',
+        movie_id: 1,
+        movie_title: 'Dune 2',
+        screen_id: 1,
+        screen_name: 'Audi 1',
+        theatre_id: 1,
+        theatre_name: 'PVR ICON'
       };
 
-      prisma.show.findUnique.mockResolvedValueOnce(mockShow);
+      const mockSeats = [
+        { id: 101, screenId: 1, seatRow: 'A', seatNumber: 1, seatType: 'SILVER' },
+        { id: 102, screenId: 1, seatRow: 'A', seatNumber: 2, seatType: 'SILVER' }
+      ];
+
+      const mockBooked = [
+        { seatId: 101 }
+      ];
+
+      db.query
+        .mockResolvedValueOnce([[mockShowRow]])
+        .mockResolvedValueOnce([mockSeats])
+        .mockResolvedValueOnce([mockBooked]);
 
       const res = await request(app).get('/api/shows/1');
 

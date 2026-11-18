@@ -1,6 +1,6 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const prisma = require('../config/prisma');
+const db = require('../config/db');
 
 const generateToken = (user) => {
   const secret = process.env.JWT_SECRET || 'eventra_super_secret_jwt_key_2026';
@@ -23,32 +23,31 @@ const register = async (req, res, next) => {
       return res.status(400).json({ message: 'Password must be at least 6 characters long.' });
     }
 
-    const existingUser = await prisma.user.findUnique({
-      where: { email }
-    });
+    const [existingUsers] = await db.query(
+      'SELECT id FROM users WHERE email = ?',
+      [email]
+    );
 
-    if (existingUser) {
+    if (existingUsers && existingUsers.length > 0) {
       return res.status(409).json({ message: 'An account with this email already exists.' });
     }
 
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
+    const userRole = role === 'ADMIN' ? 'ADMIN' : 'USER';
 
-    const user = await prisma.user.create({
-      data: {
-        name,
-        email,
-        password: hashedPassword,
-        role: role === 'ADMIN' ? 'ADMIN' : 'USER'
-      },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        createdAt: true
-      }
-    });
+    const [insertResult] = await db.query(
+      'INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)',
+      [name, email, hashedPassword, userRole]
+    );
+
+    const user = {
+      id: insertResult.insertId,
+      name,
+      email,
+      role: userRole,
+      createdAt: new Date().toISOString()
+    };
 
     const token = generateToken(user);
 
@@ -70,14 +69,16 @@ const login = async (req, res, next) => {
       return res.status(400).json({ message: 'Email and password are required.' });
     }
 
-    const user = await prisma.user.findUnique({
-      where: { email }
-    });
+    const [users] = await db.query(
+      'SELECT id, name, email, password, role, created_at AS createdAt FROM users WHERE email = ?',
+      [email]
+    );
 
-    if (!user) {
+    if (!users || users.length === 0) {
       return res.status(401).json({ message: 'Invalid email or password.' });
     }
 
+    const user = users[0];
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return res.status(401).json({ message: 'Invalid email or password.' });
@@ -103,22 +104,16 @@ const login = async (req, res, next) => {
 
 const getMe = async (req, res, next) => {
   try {
-    const user = await prisma.user.findUnique({
-      where: { id: req.user.id },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        createdAt: true
-      }
-    });
+    const [users] = await db.query(
+      'SELECT id, name, email, role, created_at AS createdAt FROM users WHERE id = ?',
+      [req.user.id]
+    );
 
-    if (!user) {
+    if (!users || users.length === 0) {
       return res.status(404).json({ message: 'User not found.' });
     }
 
-    return res.status(200).json({ user });
+    return res.status(200).json({ user: users[0] });
   } catch (error) {
     next(error);
   }
