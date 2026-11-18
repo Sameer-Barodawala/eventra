@@ -1,0 +1,26 @@
+{
+  "name": "eventra",
+  "version": "1.0.0",
+  "description": "Eventra - BookMyShow Clone built with React, Node.js, and MySQL",
+  "scripts": {
+    "test": "npm run test:server && npm run test:client",
+    "test:server": "cd server && npm test",
+    "test:client": "cd client && npm test",
+    "build:client": "cd client && npm run build",
+    "server": "cd server && npm run dev",
+    "client": "cd client && npm run dev"
+  },
+  "keywords": [
+    "bookmyshow-clone",
+    "react",
+    "nodejs",
+    "express",
+    "mysql",
+    "prisma",
+    "jest",
+    "vitest",
+    "fullstack"
+  ],
+  "author": "",
+  "license": "MIT"
+}
