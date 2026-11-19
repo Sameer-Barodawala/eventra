@@ -131,26 +131,93 @@ async function seed() {
     }
     console.log('✅ 120 seats created.');
 
-    // 5. Seed Shows
-    const now = new Date();
-    const showDate1 = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 13, 30);
-    const showDate2 = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 18, 0);
-    const showDate3 = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 21, 15);
+    // 5. Seed Shows dynamically across 5 consecutive days starting TODAY
+    const formatMySQLDateTime = (d) => {
+      const pad = (n) => String(n).padStart(2, '0');
+      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+    };
 
-    const [sh1] = await db.query(
-      'INSERT INTO shows (movie_id, screen_id, start_time, end_time, price) VALUES (?, ?, ?, ?, ?)',
-      [movieIds[0], s1.insertId, showDate1, new Date(showDate1.getTime() + 166 * 60000), 250.00]
-    );
-    await db.query(
-      'INSERT INTO shows (movie_id, screen_id, start_time, end_time, price) VALUES (?, ?, ?, ?, ?)',
-      [movieIds[0], s2.insertId, showDate2, new Date(showDate2.getTime() + 166 * 60000), 320.00]
-    );
-    await db.query(
-      'INSERT INTO shows (movie_id, screen_id, start_time, end_time, price) VALUES (?, ?, ?, ?, ?)',
-      [movieIds[1], s1.insertId, showDate3, new Date(showDate3.getTime() + 180 * 60000), 280.00]
-    );
+    let firstShowId = null;
 
-    // 6. Pre-book sample seats (C4 & C5) for Show 1
+    const showSchedules = [
+      // Dune 2
+      {
+        movieId: movieIds[0],
+        durationMins: 166,
+        slots: [
+          { screenId: s1.insertId, hours: 13, minutes: 30, price: 250.00 },
+          { screenId: s2.insertId, hours: 18, minutes: 0, price: 320.00 },
+          { screenId: s1.insertId, hours: 21, minutes: 30, price: 280.00 }
+        ]
+      },
+      // Oppenheimer
+      {
+        movieId: movieIds[1],
+        durationMins: 180,
+        slots: [
+          { screenId: s2.insertId, hours: 14, minutes: 0, price: 300.00 },
+          { screenId: s1.insertId, hours: 17, minutes: 45, price: 270.00 },
+          { screenId: s2.insertId, hours: 21, minutes: 15, price: 340.00 }
+        ]
+      },
+      // Interstellar
+      {
+        movieId: movieIds[2],
+        durationMins: 169,
+        slots: [
+          { screenId: s1.insertId, hours: 10, minutes: 30, price: 220.00 },
+          { screenId: s2.insertId, hours: 15, minutes: 45, price: 290.00 },
+          { screenId: s1.insertId, hours: 19, minutes: 45, price: 280.00 }
+        ]
+      },
+      // Inception
+      {
+        movieId: movieIds[3],
+        durationMins: 148,
+        slots: [
+          { screenId: s2.insertId, hours: 11, minutes: 15, price: 240.00 },
+          { screenId: s1.insertId, hours: 16, minutes: 0, price: 250.00 },
+          { screenId: s2.insertId, hours: 20, minutes: 30, price: 310.00 }
+        ]
+      }
+    ];
+
+    let totalShowsCount = 0;
+
+    for (let dayOffset = 0; dayOffset < 5; dayOffset++) {
+      const targetDate = new Date();
+      targetDate.setDate(targetDate.getDate() + dayOffset);
+
+      for (const schedule of showSchedules) {
+        for (const slot of schedule.slots) {
+          const startTime = new Date(
+            targetDate.getFullYear(),
+            targetDate.getMonth(),
+            targetDate.getDate(),
+            slot.hours,
+            slot.minutes,
+            0
+          );
+          const endTime = new Date(startTime.getTime() + schedule.durationMins * 60000);
+
+          const [showResult] = await db.query(
+            'INSERT INTO shows (movie_id, screen_id, start_time, end_time, price) VALUES (?, ?, ?, ?, ?)',
+            [schedule.movieId, slot.screenId, formatMySQLDateTime(startTime), formatMySQLDateTime(endTime), slot.price]
+          );
+
+          totalShowsCount++;
+
+          // Track first show (Today's 1:30 PM Dune 2) for pre-booking demonstration
+          if (!firstShowId) {
+            firstShowId = showResult.insertId;
+          }
+        }
+      }
+    }
+
+    console.log(`✅ ${totalShowsCount} shows seeded across 5 consecutive days.`);
+
+    // 6. Pre-book sample seats (C4 & C5) ONLY for Show ID #1
     const [cSeats] = await db.query(
       'SELECT id FROM seats WHERE screen_id = ? AND seat_row = ? AND seat_number IN (4, 5)',
       [s1.insertId, 'C']
@@ -158,7 +225,7 @@ async function seed() {
 
     const [b1] = await db.query(
       'INSERT INTO bookings (user_id, show_id, total_amount, booking_status) VALUES (?, ?, ?, ?)',
-      [demoUserId, sh1.insertId, 650.00, 'CONFIRMED']
+      [demoUserId, firstShowId, 650.00, 'CONFIRMED']
     );
 
     for (const seat of cSeats) {
@@ -168,7 +235,7 @@ async function seed() {
       );
     }
 
-    console.log('✅ Sample pre-booked seats created.');
+    console.log(`✅ Sample pre-booked seats (C4, C5) created on Show #${firstShowId} ONLY.`);
     console.log('🎉 Seeding completed successfully!');
   } catch (error) {
     console.error('❌ Error seeding database:', error);

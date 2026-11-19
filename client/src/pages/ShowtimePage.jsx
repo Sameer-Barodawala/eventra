@@ -12,15 +12,16 @@ export default function ShowtimePage() {
   const [error, setError] = useState(null);
   const [selectedDateIndex, setSelectedDateIndex] = useState(0);
 
-  // Generate 4 consecutive days starting from today
-  const dates = Array.from({ length: 4 }).map((_, i) => {
+  // Generate 5 consecutive days starting from today (using local calendar date)
+  const dates = Array.from({ length: 5 }).map((_, i) => {
     const d = new Date();
     d.setDate(d.getDate() + i);
+    const pad = (n) => String(n).padStart(2, '0');
     return {
       dayName: i === 0 ? 'TODAY' : d.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase(),
       dayNumber: d.getDate(),
       month: d.toLocaleDateString('en-US', { month: 'short' }).toUpperCase(),
-      fullDate: d.toISOString().split('T')[0]
+      fullDate: `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
     };
   });
 
@@ -53,8 +54,19 @@ export default function ShowtimePage() {
     );
   }
 
-  // Group shows by Theatre
-  const showsByTheatre = shows.reduce((acc, show) => {
+  const selectedDateStr = dates[selectedDateIndex]?.fullDate;
+
+  // Filter shows to ONLY those matching the active date tab (in local time)
+  const showsForSelectedDate = shows.filter((show) => {
+    if (!show.startTime) return false;
+    const showDate = new Date(show.startTime);
+    const pad = (n) => String(n).padStart(2, '0');
+    const showDateStr = `${showDate.getFullYear()}-${pad(showDate.getMonth() + 1)}-${pad(showDate.getDate())}`;
+    return showDateStr === selectedDateStr;
+  });
+
+  // Group filtered shows by Theatre
+  const showsByTheatre = showsForSelectedDate.reduce((acc, show) => {
     const theatre = show.screen?.theatre;
     const theatreId = theatre?.id || 'unknown';
     if (!acc[theatreId]) {
@@ -127,10 +139,12 @@ export default function ShowtimePage() {
       {/* Theatres & Showtime Listings */}
       <div className="space-y-6">
         {Object.keys(showsByTheatre).length === 0 ? (
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-12 text-center text-slate-400">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-12 text-center text-slate-400">
             <Film className="w-10 h-10 text-slate-600 mx-auto mb-2" />
-            <p className="font-semibold text-slate-300">No shows currently scheduled</p>
-            <p className="text-xs text-slate-500 mt-1">Please check back later or select another movie.</p>
+            <p className="font-semibold text-slate-300">
+              No shows scheduled for {dates[selectedDateIndex]?.dayName === 'TODAY' ? 'today' : dates[selectedDateIndex]?.dayName}
+            </p>
+            <p className="text-xs text-slate-500 mt-1">Please select another date above to view available showtimes.</p>
           </div>
         ) : (
           Object.values(showsByTheatre).map(({ theatre, shows }) => (
