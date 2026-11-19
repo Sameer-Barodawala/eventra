@@ -21,6 +21,10 @@ export default function MovieCard({ movie }) {
           alt={movie.title}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
           loading="lazy"
+          onError={(e) => {
+            e.target.onerror = null;
+            e.target.src = 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=800&q=80';
+          }}
         />
         <div className="absolute top-3 left-3 bg-slate-950/80 backdrop-blur-md px-2.5 py-1 rounded-full flex items-center gap-1 border border-slate-700/60">
           <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />

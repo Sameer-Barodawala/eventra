@@ -59,6 +59,10 @@ export default function HomePage() {
               src={featuredMovie.bannerUrl || featuredMovie.posterUrl}
               alt={featuredMovie.title}
               className="w-full h-full object-cover object-center filter brightness-[0.4]"
+              onError={(e) => {
+                e.target.onerror = null;
+                e.target.src = 'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?auto=format&fit=crop&w=1600&q=80';
+              }}
             />
             <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/60 to-transparent"></div>
           </div>

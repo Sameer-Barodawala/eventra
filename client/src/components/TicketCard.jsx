@@ -65,6 +65,10 @@ export default function TicketCard({ booking }) {
               src={movie.posterUrl}
               alt={movie.title}
               className="w-20 h-28 object-cover rounded-xl shadow-md border border-slate-800"
+              onError={(e) => {
+                e.target.onerror = null;
+                e.target.src = 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=800&q=80';
+              }}
             />
           )}
           <div className="flex-1 flex flex-col justify-center">

@@ -67,6 +67,10 @@ export default function MovieDetailsPage() {
           src={movie.bannerUrl || movie.posterUrl}
           alt={movie.title}
           className="w-full h-full object-cover object-center filter brightness-[0.35]"
+          onError={(e) => {
+            e.target.onerror = null;
+            e.target.src = 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=1600&q=80';
+          }}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/60 to-transparent"></div>
         <div className="absolute top-6 left-4 sm:left-8">
@@ -88,6 +92,10 @@ export default function MovieDetailsPage() {
               src={movie.posterUrl}
               alt={movie.title}
               className="w-full aspect-[2/3] object-cover rounded-2xl shadow-xl border border-slate-700/60"
+              onError={(e) => {
+                e.target.onerror = null;
+                e.target.src = 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=800&q=80';
+              }}
             />
           </div>
 
