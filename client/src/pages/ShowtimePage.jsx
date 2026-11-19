@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { showsAPI, moviesAPI } from '../services/api';
-import { ArrowLeft, Clock, MapPin, Calendar, Film } from 'lucide-react';
+import { ArrowLeft, Clock, MapPin, Calendar, Film, Sparkles } from 'lucide-react';
 
 export default function ShowtimePage() {
   const { movieId } = useParams();
@@ -11,6 +11,26 @@ export default function ShowtimePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedDateIndex, setSelectedDateIndex] = useState(0);
+
+  // Helper to safely extract YYYY-MM-DD from any date value or MySQL timestamp
+  const getLocalDateString = (dateVal) => {
+    if (!dateVal) return '';
+    if (typeof dateVal === 'string') {
+      if (dateVal.includes('T')) {
+        const d = new Date(dateVal);
+        if (!isNaN(d.getTime())) {
+          const pad = (n) => String(n).padStart(2, '0');
+          return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+        }
+      }
+      const match = dateVal.match(/^(\d{4})-(\d{2})-(\d{2})/);
+      if (match) return `${match[1]}-${match[2]}-${match[3]}`;
+    }
+    const d = new Date(dateVal);
+    if (isNaN(d.getTime())) return '';
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  };
 
   // Generate 5 consecutive days starting from today (using local calendar date)
   const dates = Array.from({ length: 5 }).map((_, i) => {
@@ -33,8 +53,22 @@ export default function ShowtimePage() {
           moviesAPI.getById(movieId),
           showsAPI.getByMovieId(movieId)
         ]);
+        const loadedShows = showsRes.data.shows || [];
         setMovie(movieRes.data.movie);
-        setShows(showsRes.data.shows || []);
+        setShows(loadedShows);
+
+        // Automatically select the first date that has shows if today has 0 shows
+        if (loadedShows.length > 0) {
+          const firstAvailableIdx = dates.findIndex((d) =>
+            loadedShows.some((s) => getLocalDateString(s.startTime) === d.fullDate)
+          );
+          if (firstAvailableIdx !== -1) {
+            setSelectedDateIndex(firstAvailableIdx);
+          } else {
+            // If shows are outside the 5-day window, default to All Dates
+            setSelectedDateIndex(-1);
+          }
+        }
       } catch (err) {
         console.error('Failed to load shows:', err);
         setError('Failed to load shows for this movie.');
@@ -54,16 +88,12 @@ export default function ShowtimePage() {
     );
   }
 
-  const selectedDateStr = dates[selectedDateIndex]?.fullDate;
+  const selectedDateStr = selectedDateIndex >= 0 ? dates[selectedDateIndex]?.fullDate : null;
 
-  // Filter shows to ONLY those matching the active date tab (in local time)
-  const showsForSelectedDate = shows.filter((show) => {
-    if (!show.startTime) return false;
-    const showDate = new Date(show.startTime);
-    const pad = (n) => String(n).padStart(2, '0');
-    const showDateStr = `${showDate.getFullYear()}-${pad(showDate.getMonth() + 1)}-${pad(showDate.getDate())}`;
-    return showDateStr === selectedDateStr;
-  });
+  // Filter shows to ONLY those matching the active date tab, or all shows if -1
+  const showsForSelectedDate = selectedDateStr
+    ? shows.filter((show) => getLocalDateString(show.startTime) === selectedDateStr)
+    : shows;
 
   // Group filtered shows by Theatre
   const showsByTheatre = showsForSelectedDate.reduce((acc, show) => {
@@ -83,6 +113,14 @@ export default function ShowtimePage() {
     return new Date(dateString).toLocaleTimeString('en-US', {
       hour: '2-digit',
       minute: '2-digit'
+    });
+  };
+
+  const formatShowDateLabel = (dateString) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric'
     });
   };
 
@@ -107,7 +145,7 @@ export default function ShowtimePage() {
             <div>
               <h1 className="text-xl sm:text-2xl font-black text-white">{movie.title}</h1>
               <p className="text-xs text-slate-400 mt-1">
-                {movie.genre} • {movie.language} • {movie.duration} mins
+                {movie.genre} • {movie.language} • {movie.duration} mins • ⭐ {parseFloat(movie.rating).toFixed(1)}
               </p>
             </div>
           </div>
@@ -116,13 +154,32 @@ export default function ShowtimePage() {
 
       {/* Date Selector Tabs */}
       <div className="flex items-center gap-3 overflow-x-auto pb-4 mb-8">
+        {/* All Dates Tab */}
+        <button
+          onClick={() => setSelectedDateIndex(-1)}
+          className={`flex flex-col items-center justify-center px-5 py-3 rounded-2xl min-w-[85px] border transition-all ${
+            selectedDateIndex === -1
+              ? 'bg-rose-600 border-rose-500 text-white shadow-lg shadow-rose-600/30'
+              : 'bg-slate-900 border-slate-800 text-slate-400 hover:border-slate-700'
+          }`}
+        >
+          <span className="text-[10px] font-bold tracking-wider uppercase opacity-80">VIEW</span>
+          <span className="text-base font-black my-0.5">ALL</span>
+          <span className="text-[10px] font-bold uppercase">{shows.length} Shows</span>
+        </button>
+
+        {/* 5 Rolling Date Tabs */}
         {dates.map((dateObj, idx) => {
           const isSelected = selectedDateIndex === idx;
+          const showCountForDate = shows.filter(
+            (s) => getLocalDateString(s.startTime) === dateObj.fullDate
+          ).length;
+
           return (
             <button
               key={dateObj.fullDate}
               onClick={() => setSelectedDateIndex(idx)}
-              className={`flex flex-col items-center justify-center px-5 py-3 rounded-2xl min-w-[80px] border transition-all ${
+              className={`flex flex-col items-center justify-center px-5 py-3 rounded-2xl min-w-[85px] border transition-all relative ${
                 isSelected
                   ? 'bg-rose-600 border-rose-500 text-white shadow-lg shadow-rose-600/30'
                   : 'bg-slate-900 border-slate-800 text-slate-400 hover:border-slate-700'
@@ -131,6 +188,11 @@ export default function ShowtimePage() {
               <span className="text-[10px] font-bold tracking-wider uppercase opacity-80">{dateObj.dayName}</span>
               <span className="text-lg font-black my-0.5">{dateObj.dayNumber}</span>
               <span className="text-[10px] font-bold uppercase">{dateObj.month}</span>
+
+              {/* Show availability indicator dot */}
+              {showCountForDate > 0 && !isSelected && (
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 absolute bottom-1.5"></span>
+              )}
             </button>
           );
         })}
@@ -140,11 +202,20 @@ export default function ShowtimePage() {
       <div className="space-y-6">
         {Object.keys(showsByTheatre).length === 0 ? (
           <div className="bg-slate-900 border border-slate-800 rounded-3xl p-12 text-center text-slate-400">
-            <Film className="w-10 h-10 text-slate-600 mx-auto mb-2" />
-            <p className="font-semibold text-slate-300">
-              No shows scheduled for {dates[selectedDateIndex]?.dayName === 'TODAY' ? 'today' : dates[selectedDateIndex]?.dayName}
+            <Film className="w-12 h-12 text-slate-600 mx-auto mb-3" />
+            <h3 className="text-base font-bold text-slate-200">
+              No shows scheduled for {selectedDateIndex >= 0 ? (dates[selectedDateIndex]?.dayName === 'TODAY' ? 'today' : dates[selectedDateIndex]?.dayName) : 'the selected filter'}
+            </h3>
+            <p className="text-xs text-slate-400 mt-1 mb-6">
+              Shows are scheduled on other dates. Click "View All" or choose another date tab.
             </p>
-            <p className="text-xs text-slate-500 mt-1">Please select another date above to view available showtimes.</p>
+            <button
+              onClick={() => setSelectedDateIndex(-1)}
+              className="inline-flex items-center gap-2 text-xs font-semibold bg-rose-600 hover:bg-rose-500 text-white px-6 py-2.5 rounded-full transition shadow-lg shadow-rose-600/30"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              View All Available Shows ({shows.length})
+            </button>
           </div>
         ) : (
           Object.values(showsByTheatre).map(({ theatre, shows }) => (
@@ -181,6 +252,12 @@ export default function ShowtimePage() {
                       <Clock className="w-3.5 h-3.5" />
                       {formatTime(show.startTime)}
                     </div>
+                    {/* Show date label when viewing All Dates */}
+                    {selectedDateIndex === -1 && (
+                      <div className="text-[10px] text-rose-400 font-semibold mt-0.5">
+                        {formatShowDateLabel(show.startTime)}
+                      </div>
+                    )}
                     <div className="text-[10px] text-slate-400 mt-1">
                       {show.screen.name}
                     </div>

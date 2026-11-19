@@ -4,7 +4,7 @@ import { moviesAPI } from '../services/api';
 import MovieCard from '../components/MovieCard';
 import { Flame, Film, Sparkles, Filter } from 'lucide-react';
 
-const GENRES = ['All', 'Sci-Fi', 'Action', 'Drama', 'Adventure'];
+const GENRES = ['All', 'Action', 'Sci-Fi', 'Horror', 'Comedy', 'Drama', 'Romance', 'Crime'];
 
 export default function HomePage() {
   const [movies, setMovies] = useState([]);
@@ -47,7 +47,7 @@ export default function HomePage() {
     setSearchParams(newParams);
   };
 
-  const featuredMovie = movies[0];
+  const featuredMovie = movies.find((m) => m.title.toLowerCase().includes('avengers')) || movies[0];
 
   return (
     <div className="min-h-screen pb-16">

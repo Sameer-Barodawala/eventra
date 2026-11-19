@@ -2,9 +2,9 @@ const bcrypt = require('bcryptjs');
 const db = require('../config/db');
 
 async function seed() {
-  console.log('🌱 Starting database seed...');
+  console.log('🌱 Starting comprehensive database seed...');
   try {
-    // Clean old data
+    // 1. Clean existing data in reverse order of foreign keys
     await db.query('DELETE FROM booking_seats');
     await db.query('DELETE FROM bookings');
     await db.query('DELETE FROM shows');
@@ -14,7 +14,7 @@ async function seed() {
     await db.query('DELETE FROM movies');
     await db.query('DELETE FROM users');
 
-    // 1. Seed Users
+    // 2. Seed Users
     const salt = await bcrypt.genSalt(10);
     const userPass = await bcrypt.hash('password123', salt);
     const adminPass = await bcrypt.hash('admin123', salt);
@@ -32,11 +32,96 @@ async function seed() {
 
     console.log('✅ Users seeded: john@example.com (password123)');
 
-    // 2. Seed Movies
+    // 3. Seed Complete Movie Catalog (Featured Premiere, Bollywood, Global Blockbusters)
     const movies = [
+      // 1. Featured Premiere
+      [
+        'Avengers: Doomsday',
+        'Earth\'s mightiest heroes face their greatest existential threat yet as the multiverse fractures and Doctor Victor von Doom emerges from the shadows to reshape reality and challenge every timeline.',
+        'https://images.unsplash.com/photo-1635805737707-575885ab0820?auto=format&fit=crop&w=800&q=80',
+        'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?auto=format&fit=crop&w=1600&q=80',
+        'Action, Sci-Fi, Adventure',
+        175,
+        'English',
+        9.3,
+        '2026-05-01'
+      ],
+      // 2. Bollywood Blockbuster 1
+      [
+        'Singham Again',
+        'DCP Bajirao Singham embarks on a high-stakes cross-border rescue mission, uniting with fierce allies from the Cop Universe against a ruthless international crime syndicate.',
+        'https://images.unsplash.com/photo-1509198397868-475647b2a1e5?auto=format&fit=crop&w=800&q=80',
+        'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=1600&q=80',
+        'Action, Drama, Thriller',
+        160,
+        'Hindi',
+        8.5,
+        '2024-11-01'
+      ],
+      // 3. Bollywood Blockbuster 2
+      [
+        'Bhool Bhulaiyaa 3',
+        'Rooh Baba ventures into the haunted royal palace of Raktaghat in Bengal, encountering two menacing royal spirits claiming to be the vengeful ghost of Manjulika.',
+        'https://images.unsplash.com/photo-1509248961158-e54f6934749c?auto=format&fit=crop&w=800&q=80',
+        'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=1600&q=80',
+        'Comedy, Horror, Mystery',
+        158,
+        'Hindi',
+        8.3,
+        '2024-11-01'
+      ],
+      // 4. Bogota: City of the Lost
+      [
+        'Bogota: City of the Lost',
+        'Set in the 1990s, a young Korean immigrant arrives in the dangerous streets of Bogota, Colombia, and rises from the bottom of the black market to become a powerful local boss.',
+        'https://images.unsplash.com/photo-1514565131-fce0801e5785?auto=format&fit=crop&w=800&q=80',
+        'https://images.unsplash.com/photo-1477959858617-67f30bc75b82?auto=format&fit=crop&w=1600&q=80',
+        'Crime, Drama, Thriller',
+        132,
+        'Korean',
+        8.4,
+        '2024-12-15'
+      ],
+      // 5. The Gray Man
+      [
+        'The Gray Man',
+        'When the CIA\'s top covert operative accidentally uncovers dark agency secrets, a psychopathic former colleague puts a massive bounty on his head, triggering a global manhunt by international assassins.',
+        'https://images.unsplash.com/photo-1536440136628-849c177e76a1?auto=format&fit=crop&w=800&q=80',
+        'https://images.unsplash.com/photo-1509198397868-475647b2a1e5?auto=format&fit=crop&w=1600&q=80',
+        'Action, Thriller',
+        129,
+        'English',
+        8.1,
+        '2022-07-22'
+      ],
+      // 6. Drawing Closer
+      [
+        'Drawing Closer',
+        'With only a year left to live due to a terminal cardiac illness, Akito finds renewed hope and unexpected love when he meets Aoi, a cheerful girl with only six months left to live herself.',
+        'https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?auto=format&fit=crop&w=800&q=80',
+        'https://images.unsplash.com/photo-1518495973542-4542c06a5843?auto=format&fit=crop&w=1600&q=80',
+        'Romance, Drama',
+        118,
+        'Japanese',
+        8.7,
+        '2024-06-27'
+      ],
+      // 7. Resident Evil: Death Island
+      [
+        'Resident Evil: Death Island',
+        'BSAA agent Chris Redfield investigates a bio-organic outbreak in San Francisco, while Leon S. Kennedy and Jill Valentine track the infected virus trail straight to Alcatraz Island.',
+        'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=800&q=80',
+        'https://images.unsplash.com/photo-1509198397868-475647b2a1e5?auto=format&fit=crop&w=1600&q=80',
+        'Action, Horror, Sci-Fi',
+        91,
+        'English',
+        8.0,
+        '2023-07-07'
+      ],
+      // 8. Dune: Part Two
       [
         'Dune: Part Two',
-        'Paul Atreides unites with Chani and the Fremen while seeking revenge against the conspirators who destroyed his family. Facing a choice between the love of his life and the fate of the universe, he endeavors to prevent a terrible future only he can foresee.',
+        'Paul Atreides unites with Chani and the Fremen while seeking revenge against the conspirators who destroyed his family, facing a choice between love and the fate of the universe.',
         'https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=800&q=80',
         'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=1600&q=80',
         'Sci-Fi, Adventure',
@@ -45,9 +130,10 @@ async function seed() {
         8.9,
         '2024-03-01'
       ],
+      // 9. Oppenheimer
       [
         'Oppenheimer',
-        'The story of American scientist J. Robert Oppenheimer and his role in the development of the atomic bomb during World War II.',
+        'The story of American theoretical physicist J. Robert Oppenheimer and his role in the development of the atomic bomb during World War II.',
         'https://images.unsplash.com/photo-1440404653325-ab127d49abc1?auto=format&fit=crop&w=800&q=80',
         'https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=1600&q=80',
         'Biography, Drama, History',
@@ -56,20 +142,22 @@ async function seed() {
         8.9,
         '2023-07-21'
       ],
+      // 10. Interstellar
       [
         'Interstellar',
-        'When Earth becomes uninhabitable in the future, a farmer and ex-NASA pilot, Joseph Cooper, is tasked to pilot a spacecraft, along with a team of researchers, to find a new planet for humans.',
+        'When Earth faces environmental collapse, a team of astronauts travel through a wormhole near Saturn in search of a new habitable world for humanity.',
         'https://images.unsplash.com/photo-1506703719100-a0f3a48c0f86?auto=format&fit=crop&w=800&q=80',
         'https://images.unsplash.com/photo-1446776811953-b23d57bd21aa?auto=format&fit=crop&w=1600&q=80',
         'Sci-Fi, Adventure, Drama',
         169,
         'English',
-        8.7,
+        8.8,
         '2014-11-07'
       ],
+      // 11. Inception
       [
         'Inception',
-        'A thief who steals corporate secrets through the use of dream-sharing technology is given the inverse task of planting an idea into the mind of a C.E.O., but his tragic past may doom the project and his team to disaster.',
+        'A skilled thief who steals corporate secrets through dream-sharing technology is offered a chance to have his criminal history erased as payment for the implantation of another person\'s idea.',
         'https://images.unsplash.com/photo-1478760329108-5c3ed9d495a0?auto=format&fit=crop&w=800&q=80',
         'https://images.unsplash.com/photo-1509198397868-475647b2a1e5?auto=format&fit=crop&w=1600&q=80',
         'Action, Sci-Fi, Thriller',
@@ -88,9 +176,9 @@ async function seed() {
       );
       movieIds.push(res.insertId);
     }
-    console.log(`✅ ${movieIds.length} movies seeded.`);
+    console.log(`✅ ${movieIds.length} movies seeded (including Avengers: Doomsday, Singham Again, Bhool Bhulaiyaa 3, Bogota, The Gray Man, Drawing Closer, Resident Evil).`);
 
-    // 3. Seed Theatres & Screens
+    // 4. Seed Theatres & Screens
     const [t1] = await db.query(
       'INSERT INTO theatres (name, city, location) VALUES (?, ?, ?)',
       ['PVR ICON: Gold Class', 'Mumbai', 'Phoenix Palladium, Lower Parel']
@@ -109,7 +197,7 @@ async function seed() {
       [t2.insertId, 'IMAX Laser Screen', 60]
     );
 
-    // 4. Seed Seats (A to F, 10 per row)
+    // 5. Seed Seats (A to F, 10 per row)
     const rows = [
       { row: 'A', type: 'SILVER' },
       { row: 'B', type: 'SILVER' },
@@ -129,67 +217,38 @@ async function seed() {
         }
       }
     }
-    console.log('✅ 120 seats created.');
+    console.log('✅ 120 seats created across screens.');
 
-    // 5. Seed Shows dynamically across 5 consecutive days starting TODAY
+    // 6. Seed Shows dynamically across 6 consecutive days starting TODAY
     const formatMySQLDateTime = (d) => {
       const pad = (n) => String(n).padStart(2, '0');
       return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
     };
 
     let firstShowId = null;
-
-    const showSchedules = [
-      // Dune 2
-      {
-        movieId: movieIds[0],
-        durationMins: 166,
-        slots: [
-          { screenId: s1.insertId, hours: 13, minutes: 30, price: 250.00 },
-          { screenId: s2.insertId, hours: 18, minutes: 0, price: 320.00 },
-          { screenId: s1.insertId, hours: 21, minutes: 30, price: 280.00 }
-        ]
-      },
-      // Oppenheimer
-      {
-        movieId: movieIds[1],
-        durationMins: 180,
-        slots: [
-          { screenId: s2.insertId, hours: 14, minutes: 0, price: 300.00 },
-          { screenId: s1.insertId, hours: 17, minutes: 45, price: 270.00 },
-          { screenId: s2.insertId, hours: 21, minutes: 15, price: 340.00 }
-        ]
-      },
-      // Interstellar
-      {
-        movieId: movieIds[2],
-        durationMins: 169,
-        slots: [
-          { screenId: s1.insertId, hours: 10, minutes: 30, price: 220.00 },
-          { screenId: s2.insertId, hours: 15, minutes: 45, price: 290.00 },
-          { screenId: s1.insertId, hours: 19, minutes: 45, price: 280.00 }
-        ]
-      },
-      // Inception
-      {
-        movieId: movieIds[3],
-        durationMins: 148,
-        slots: [
-          { screenId: s2.insertId, hours: 11, minutes: 15, price: 240.00 },
-          { screenId: s1.insertId, hours: 16, minutes: 0, price: 250.00 },
-          { screenId: s2.insertId, hours: 20, minutes: 30, price: 310.00 }
-        ]
-      }
-    ];
-
     let totalShowsCount = 0;
 
-    for (let dayOffset = 0; dayOffset < 5; dayOffset++) {
+    // Daily show timing patterns
+    const timeSlots = [
+      { hours: 10, minutes: 30, screenId: s1.insertId, price: 220.00 },
+      { hours: 13, minutes: 45, screenId: s2.insertId, price: 320.00 },
+      { hours: 17, minutes: 15, screenId: s1.insertId, price: 260.00 },
+      { hours: 20, minutes: 30, screenId: s2.insertId, price: 350.00 }
+    ];
+
+    for (let dayOffset = 0; dayOffset < 6; dayOffset++) {
       const targetDate = new Date();
       targetDate.setDate(targetDate.getDate() + dayOffset);
 
-      for (const schedule of showSchedules) {
-        for (const slot of schedule.slots) {
+      // Distribute shows for all movies across the day
+      for (let mIdx = 0; mIdx < movieIds.length; mIdx++) {
+        const movieId = movieIds[mIdx];
+        
+        // Give each movie 2 distinct shows per day
+        const slot1 = timeSlots[mIdx % timeSlots.length];
+        const slot2 = timeSlots[(mIdx + 2) % timeSlots.length];
+
+        for (const slot of [slot1, slot2]) {
           const startTime = new Date(
             targetDate.getFullYear(),
             targetDate.getMonth(),
@@ -198,16 +257,16 @@ async function seed() {
             slot.minutes,
             0
           );
-          const endTime = new Date(startTime.getTime() + schedule.durationMins * 60000);
+          const endTime = new Date(startTime.getTime() + 150 * 60000);
 
           const [showResult] = await db.query(
             'INSERT INTO shows (movie_id, screen_id, start_time, end_time, price) VALUES (?, ?, ?, ?, ?)',
-            [schedule.movieId, slot.screenId, formatMySQLDateTime(startTime), formatMySQLDateTime(endTime), slot.price]
+            [movieId, slot.screenId, formatMySQLDateTime(startTime), formatMySQLDateTime(endTime), slot.price]
           );
 
           totalShowsCount++;
 
-          // Track first show (Today's 1:30 PM Dune 2) for pre-booking demonstration
+          // Keep track of the very first show (Today's Avengers show) for sample demo pre-booking
           if (!firstShowId) {
             firstShowId = showResult.insertId;
           }
@@ -215,9 +274,9 @@ async function seed() {
       }
     }
 
-    console.log(`✅ ${totalShowsCount} shows seeded across 5 consecutive days.`);
+    console.log(`✅ ${totalShowsCount} shows seeded across 6 consecutive days.`);
 
-    // 6. Pre-book sample seats (C4 & C5) ONLY for Show ID #1
+    // 7. Pre-book sample seats (C4 & C5) ONLY for the very first show (Show #1)
     const [cSeats] = await db.query(
       'SELECT id FROM seats WHERE screen_id = ? AND seat_row = ? AND seat_number IN (4, 5)',
       [s1.insertId, 'C']
