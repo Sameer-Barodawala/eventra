@@ -9,11 +9,12 @@ export default function TicketConfirmationPage() {
   const location = useLocation();
 
   const [booking, setBooking] = useState(location.state?.booking || null);
-  const [loading, setLoading] = useState(!booking);
+  const isBookingIncomplete = !booking || !booking.show?.screen?.theatre || !booking.show?.startTime;
+  const [loading, setLoading] = useState(isBookingIncomplete);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    if (!booking && bookingId) {
+    if (isBookingIncomplete && bookingId) {
       const fetchBooking = async () => {
         setLoading(true);
         try {
@@ -29,7 +30,7 @@ export default function TicketConfirmationPage() {
 
       fetchBooking();
     }
-  }, [booking, bookingId]);
+  }, [bookingId, isBookingIncomplete]);
 
   if (loading) {
     return (

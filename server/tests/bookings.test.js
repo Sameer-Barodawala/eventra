@@ -93,8 +93,27 @@ describe('Booking Endpoints (/api/bookings)', () => {
       db.getConnection.mockResolvedValueOnce(mockConn);
 
       mockConn.query
-        // 1. Show query
-        .mockResolvedValueOnce([[{ id: 1, screen_id: 1, price: '200.00', movie_title: 'Dune 2' }]])
+        // 1. Show query with joined details
+        .mockResolvedValueOnce([[
+          {
+            id: 1,
+            movie_id: 1,
+            screen_id: 1,
+            start_time: '2026-11-20T10:00:00.000Z',
+            end_time: '2026-11-20T13:00:00.000Z',
+            price: '200.00',
+            movie_title: 'Dune 2',
+            movie_poster: 'poster.jpg',
+            movie_genre: 'Sci-Fi',
+            movie_duration: 166,
+            movie_language: 'English',
+            screen_name: 'Audi 1',
+            theatre_id: 1,
+            theatre_name: 'PVR ICON',
+            theatre_city: 'Mumbai',
+            theatre_location: 'Lower Parel'
+          }
+        ]])
         // 2. Seats query
         .mockResolvedValueOnce([
           [

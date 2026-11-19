@@ -15,11 +15,17 @@ const createBooking = async (req, res, next) => {
     conn = await db.getConnection();
     await conn.beginTransaction();
 
-    // 1. Verify show exists
+    // 1. Verify show exists with complete movie, screen, and theatre details
     const [shows] = await conn.query(
-      `SELECT sh.id, sh.screen_id, sh.price, m.title AS movie_title
+      `SELECT sh.id, sh.movie_id, sh.screen_id, sh.start_time, sh.end_time, sh.price,
+              m.title AS movie_title, m.poster_url AS movie_poster, m.genre AS movie_genre,
+              m.duration AS movie_duration, m.language AS movie_language,
+              sc.name AS screen_name,
+              t.id AS theatre_id, t.name AS theatre_name, t.city AS theatre_city, t.location AS theatre_location
        FROM shows sh
        JOIN movies m ON sh.movie_id = m.id
+       JOIN screens sc ON sh.screen_id = sc.id
+       JOIN theatres t ON sc.theatre_id = t.id
        WHERE sh.id = ?`,
       [showId]
     );
@@ -93,7 +99,7 @@ const createBooking = async (req, res, next) => {
     // Commit transaction
     await conn.commit();
 
-    // 7. Return complete booking details
+    // 7. Return complete booking details with full show, theatre, and screen metadata
     const booking = {
       id: bookingId,
       userId,
@@ -101,6 +107,30 @@ const createBooking = async (req, res, next) => {
       totalAmount,
       bookingStatus: 'CONFIRMED',
       bookingDate: new Date().toISOString(),
+      show: {
+        id: show.id,
+        startTime: show.start_time,
+        endTime: show.end_time,
+        price: parseFloat(show.price),
+        movie: {
+          id: show.movie_id,
+          title: show.movie_title,
+          posterUrl: show.movie_poster,
+          genre: show.movie_genre,
+          duration: show.movie_duration,
+          language: show.movie_language
+        },
+        screen: {
+          id: show.screen_id,
+          name: show.screen_name,
+          theatre: {
+            id: show.theatre_id,
+            name: show.theatre_name,
+            city: show.theatre_city,
+            location: show.theatre_location
+          }
+        }
+      },
       bookingSeats: seats.map((s) => ({
         seat: {
           id: s.id,

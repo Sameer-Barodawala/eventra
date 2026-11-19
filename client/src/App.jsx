@@ -2,6 +2,7 @@ import React from 'react';
 import { Routes, Route } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import ProtectedRoute from './components/ProtectedRoute';
+import RenderColdStartModal from './components/RenderColdStartModal';
 
 import HomePage from './pages/HomePage';
 import MovieDetailsPage from './pages/MovieDetailsPage';
@@ -16,6 +17,7 @@ import RegisterPage from './pages/RegisterPage';
 export default function App() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
+      <RenderColdStartModal />
       <Navbar />
       <div className="flex-1">
         <Routes>

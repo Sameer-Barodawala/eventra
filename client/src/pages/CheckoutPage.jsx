@@ -51,7 +51,10 @@ export default function CheckoutPage() {
         seatIds
       });
 
-      const confirmedBooking = res.data.booking;
+      const confirmedBooking = {
+        ...res.data.booking,
+        show: res.data.booking?.show || show
+      };
       // Navigate to confirmation page
       navigate(`/booking-confirmed/${confirmedBooking.id}`, {
         state: { booking: confirmedBooking },

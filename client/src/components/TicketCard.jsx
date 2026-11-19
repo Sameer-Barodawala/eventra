@@ -10,7 +10,10 @@ export default function TicketCard({ booking }) {
   const theatre = screen?.theatre;
 
   const formatShowDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
+    if (!dateString) return 'Date TBA';
+    const d = new Date(dateString);
+    if (isNaN(d.getTime())) return 'Date TBA';
+    return d.toLocaleDateString('en-US', {
       weekday: 'short',
       month: 'short',
       day: 'numeric',
@@ -19,7 +22,10 @@ export default function TicketCard({ booking }) {
   };
 
   const formatShowTime = (dateString) => {
-    return new Date(dateString).toLocaleTimeString('en-US', {
+    if (!dateString) return 'Time TBA';
+    const d = new Date(dateString);
+    if (isNaN(d.getTime())) return 'Time TBA';
+    return d.toLocaleTimeString('en-US', {
       hour: '2-digit',
       minute: '2-digit'
     });
@@ -73,11 +79,13 @@ export default function TicketCard({ booking }) {
           <div className="flex items-start gap-2 text-sm text-slate-200 font-semibold">
             <MapPin className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
             <div>
-              <p>{theatre?.name}</p>
-              <p className="text-xs text-slate-400 font-normal">{theatre?.location}, {theatre?.city}</p>
+              <p>{theatre?.name || 'Grand Cinema'}</p>
+              <p className="text-xs text-slate-400 font-normal">
+                {theatre?.location ? `${theatre.location}${theatre.city ? `, ${theatre.city}` : ''}` : (theatre?.city || 'Location unavailable')}
+              </p>
             </div>
           </div>
-          <p className="text-xs text-rose-400 font-medium pl-6">{screen?.name}</p>
+          <p className="text-xs text-rose-400 font-medium pl-6">{screen?.name || 'Screen 1'}</p>
         </div>
 
         {/* Show Timing & Seats */}
