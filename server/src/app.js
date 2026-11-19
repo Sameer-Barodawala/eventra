@@ -18,6 +18,21 @@ app.get('/api/health', (req, res) => {
   res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// Auto-sync dynamic movies & live shows if needed (development & production)
+if (process.env.NODE_ENV !== 'test') {
+  const { autoSyncShowsIfNeeded } = require('./db/autoSync');
+  app.use(async (req, res, next) => {
+    if (req.method === 'GET' && (req.path.startsWith('/api/movies') || req.path.startsWith('/api/shows'))) {
+      try {
+        await autoSyncShowsIfNeeded();
+      } catch (err) {
+        // Continue even if db sync encounters a transient note
+      }
+    }
+    next();
+  });
+}
+
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/movies', movieRoutes);
